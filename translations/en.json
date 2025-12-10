@@ -1,0 +1,59 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Kakao Navi",
+        "description": "Enter your Kakao API key. {info}",
+        "data": {
+          "api_key": "Kakao API Key"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid API key",
+      "cannot_connect": "Cannot connect to Kakao API",
+      "unknown": "Unknown error occurred",
+      "missing_location": "Please provide start and end locations"
+    },
+    "abort": {
+      "already_configured": "This API key is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "route_list": {
+        "title": "Manage Routes",
+        "description": "Add, edit, or delete routes",
+        "data": {
+          "action": "Action"
+        }
+      },
+      "add_route": {
+        "title": "Add New Route",
+        "description": "Enter route details. {tip}",
+        "data": {
+          "start_entity": "Start Location (Entity)",
+          "start": "Start Address (Text)",
+          "end_entity": "End Location (Entity)",
+          "end": "End Address (Text)",
+          "waypoint_entity": "Waypoint (Entity)",
+          "waypoint": "Waypoint Address (Text)",
+          "priority": "Route Priority"
+        }
+      },
+      "edit_route": {
+        "title": "Edit Route",
+        "description": "Update route details. {tip}",
+        "data": {
+          "start_entity": "Start Location (Entity)",
+          "start": "Start Address (Text)",
+          "end_entity": "End Location (Entity)",
+          "end": "End Address (Text)",
+          "waypoint_entity": "Waypoint (Entity)",
+          "waypoint": "Waypoint Address (Text)",
+          "priority": "Route Priority"
+        }
+      }
+    }
+  }
+}

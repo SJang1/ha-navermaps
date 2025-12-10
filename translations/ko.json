@@ -1,0 +1,59 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Kakao Navi 설정",
+        "description": "Kakao API 키를 입력하세요. {info}",
+        "data": {
+          "api_key": "Kakao API 키"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "유효하지 않은 API 키",
+      "cannot_connect": "Kakao API에 연결할 수 없습니다",
+      "unknown": "알 수 없는 오류가 발생했습니다",
+      "missing_location": "출발지와 도착지를 입력하세요"
+    },
+    "abort": {
+      "already_configured": "이 API 키는 이미 설정되어 있습니다"
+    }
+  },
+  "options": {
+    "step": {
+      "route_list": {
+        "title": "경로 관리",
+        "description": "경로를 추가, 수정 또는 삭제합니다",
+        "data": {
+          "action": "작업"
+        }
+      },
+      "add_route": {
+        "title": "새 경로 추가",
+        "description": "경로 정보를 입력하세요. {tip}",
+        "data": {
+          "start_entity": "출발 위치 (엔티티)",
+          "start": "출발지 주소 (텍스트)",
+          "end_entity": "도착 위치 (엔티티)",
+          "end": "도착지 주소 (텍스트)",
+          "waypoint_entity": "경유지 (엔티티)",
+          "waypoint": "경유지 주소 (텍스트)",
+          "priority": "경로 우선순위"
+        }
+      },
+      "edit_route": {
+        "title": "경로 수정",
+        "description": "경로 정보를 업데이트합니다. {tip}",
+        "data": {
+          "start_entity": "출발 위치 (엔티티)",
+          "start": "출발지 주소 (텍스트)",
+          "end_entity": "도착 위치 (엔티티)",
+          "end": "도착지 주소 (텍스트)",
+          "waypoint_entity": "경유지 (엔티티)",
+          "waypoint": "경유지 주소 (텍스트)",
+          "priority": "경로 우선순위"
+        }
+      }
+    }
+  }
+}

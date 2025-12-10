@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Kakao Navi",
+        "description": "Enter your Kakao API key to get started. After adding the integration, configure your routes in the options.",
+        "data": {
+          "api_key": "Kakao API Key"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid API key provided",
+      "cannot_connect": "Cannot connect to Kakao API servers",
+      "unknown": "An unknown error occurred"
+    },
+    "abort": {
+      "already_configured": "This API key is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "route_list": {
+        "title": "Manage Routes",
+        "description": "Add new routes or edit/delete existing ones",
+        "data": {
+          "action": "Select an action"
+        }
+      },
+      "add_route": {
+        "title": "Add New Route",
+        "description": "Configure a new route for navigation",
+        "data": {
+          "start": "Start Address",
+          "end": "Destination Address",
+          "waypoint": "Waypoint (Optional)",
+          "priority": "Route Priority"
+        }
+      },
+      "edit_route": {
+        "title": "Edit Route",
+        "description": "Modify existing route details",
+        "data": {
+          "start": "Start Address",
+          "end": "Destination Address",
+          "waypoint": "Waypoint (Optional)",
+          "priority": "Route Priority"
+        }
+      }
+    }
+  }
+}
