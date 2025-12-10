@@ -1,0 +1,7 @@
+{
+  "name": "Naver Maps Integration",
+  "render_readme": true,
+  "domains": ["sensor"],
+  "homeassistant": "2024.1.0",
+  "content_in_root": true
+}
