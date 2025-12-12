@@ -13,7 +13,8 @@
       "invalid_auth": "Invalid API key",
       "cannot_connect": "Cannot connect to Naver API",
       "unknown": "Unknown error occurred",
-      "missing_location": "Please provide start and end locations"
+      "missing_location": "Please provide start and end locations",
+      "missing_waypoint": "Please provide a waypoint"
     },
     "abort": {
       "already_configured": "This API key is already configured"
@@ -25,20 +26,37 @@
         "title": "Manage Routes",
         "description": "Add, edit, or delete routes",
         "data": {
-          "action": "Action"
+          "action": "Action",
+          "scan_interval": "Update interval"
         }
       },
       "add_route": {
         "title": "Add New Route",
         "description": "Enter route details. {tip}",
         "data": {
+          "route_name": "Route Name (optional)",
           "start_entity": "Start Location (Entity)",
           "start": "Start Address (Text)",
           "end_entity": "End Location (Entity)",
           "end": "End Address (Text)",
+          "priority": "Route Priority",
+          "action": "Action"
+        }
+      },
+      "add_waypoint": {
+        "title": "Add Waypoint ({count}/{max})",
+        "description": "Select a waypoint entity or enter an address",
+        "data": {
           "waypoint_entity": "Waypoint (Entity)",
           "waypoint": "Waypoint Address (Text)",
-          "priority": "Route Priority"
+          "action": "Action"
+        }
+      },
+      "waypoint_list": {
+        "title": "Manage Waypoints",
+        "description": "Current waypoints: {waypoint_count}/{max_waypoints}\n{route_info}",
+        "data": {
+          "action": "Action"
         }
       },
       "edit_route": {

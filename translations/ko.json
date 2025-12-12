@@ -13,7 +13,8 @@
       "invalid_auth": "유효하지 않은 API 키",
       "cannot_connect": "Naver API에 연결할 수 없습니다",
       "unknown": "알 수 없는 오류가 발생했습니다",
-      "missing_location": "출발지와 도착지를 입력하세요"
+      "missing_location": "출발지와 도착지를 입력하세요",
+      "missing_waypoint": "경유지를 입력하세요"
     },
     "abort": {
       "already_configured": "이 API 키는 이미 설정되어 있습니다"
@@ -25,20 +26,37 @@
         "title": "경로 관리",
         "description": "경로를 추가, 수정 또는 삭제합니다",
         "data": {
-          "action": "작업"
+          "action": "작업",
+          "scan_interval": "업데이트 주기"
         }
       },
       "add_route": {
         "title": "새 경로 추가",
         "description": "경로 정보를 입력하세요. {tip}",
         "data": {
+          "route_name": "경로 이름 (선택)",
           "start_entity": "출발 위치 (엔티티)",
           "start": "출발지 주소 (텍스트)",
           "end_entity": "도착 위치 (엔티티)",
           "end": "도착지 주소 (텍스트)",
+          "priority": "경로 우선순위",
+          "action": "작업"
+        }
+      },
+      "add_waypoint": {
+        "title": "경유지 추가 ({count}/{max})",
+        "description": "경유지를 선택하거나 주소를 입력하세요",
+        "data": {
           "waypoint_entity": "경유지 (엔티티)",
           "waypoint": "경유지 주소 (텍스트)",
-          "priority": "경로 우선순위"
+          "action": "작업"
+        }
+      },
+      "waypoint_list": {
+        "title": "경유지 관리",
+        "description": "현재 경유지: {waypoint_count}/{max_waypoints}개\n{route_info}",
+        "data": {
+          "action": "작업"
         }
       },
       "edit_route": {

@@ -10,6 +10,8 @@ import homeassistant.helpers.config_validation as cv
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "ha-navermaps"
+MAX_WAYPOINTS = 5
+
 
 class NaverMapsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Naver Maps."""
@@ -70,6 +72,9 @@ class NaverMapsOptionsFlowHandler(config_entries.OptionsFlow):
         self.routes = dict(config_entry.options.get("routes", {}))
         self.scan_interval = config_entry.options.get("scan_interval", 10)
         self.editing_route_id = None
+        # Temporary storage for route being added/edited
+        self._temp_route = {}
+        self._temp_waypoints = []
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -82,6 +87,9 @@ class NaverMapsOptionsFlowHandler(config_entries.OptionsFlow):
             self.scan_interval = user_input.get("scan_interval", self.scan_interval)
             
             if action == "add":
+                # Reset temp storage
+                self._temp_route = {}
+                self._temp_waypoints = []
                 return await self.async_step_add_route()
             elif action.startswith("delete_"):
                 route_id = action.replace("delete_", "")
@@ -111,7 +119,7 @@ class NaverMapsOptionsFlowHandler(config_entries.OptionsFlow):
                 return self.async_abort(reason="")
 
         # Build list of routes with actions
-        route_actions = {"add": "➕ Add new route", "save": "✅ Save and finish"}
+        route_actions = {"add": "➕ 새 경로 추가", "save": "✅ 저장 후 종료"}
         
         # Show added routes as info (non-actionable)
         if self.routes:
@@ -124,8 +132,13 @@ class NaverMapsOptionsFlowHandler(config_entries.OptionsFlow):
                     display_name = f"  • {custom_name}"
                 else:
                     display_name = f"  • {start} → {end}"
-                    if route_data.get('waypoint'):
-                        display_name += f" (via {route_data['waypoint']})"
+                
+                # Show waypoints count if any
+                waypoints = route_data.get('waypoints', [])
+                if waypoints:
+                    display_name += f" (경유지 {len(waypoints)}개)"
+                elif route_data.get('waypoint'):
+                    display_name += f" (경유지 1개)"
                 
                 # Add delete option
                 route_actions[f"delete_{route_id}"] = f"🗑️  {display_name}"
@@ -150,7 +163,7 @@ class NaverMapsOptionsFlowHandler(config_entries.OptionsFlow):
         )
 
     async def async_step_add_route(self, user_input=None):
-        """Add a new route."""
+        """Add a new route - basic info."""
         errors = {}
 
         if user_input is not None:
@@ -158,34 +171,30 @@ class NaverMapsOptionsFlowHandler(config_entries.OptionsFlow):
             
             # Handle cancel/back action
             if action == "cancel":
+                self._temp_route = {}
+                self._temp_waypoints = []
                 return await self.async_step_route_list()
             
-            # Handle add route action
-            if action == "confirm":
-                # Prefer entity selection over text input
-                start = user_input.get("start_entity") or user_input.get("start", "")
-                end = user_input.get("end_entity") or user_input.get("end", "")
-                waypoint = user_input.get("waypoint_entity") or user_input.get("waypoint", "")
-                route_name = user_input.get("route_name", "").strip()
+            # Prefer entity selection over text input
+            start = user_input.get("start_entity") or user_input.get("start", "")
+            end = user_input.get("end_entity") or user_input.get("end", "")
+            
+            if not start or not end:
+                errors["base"] = "missing_location"
+            else:
+                # Store basic info
+                self._temp_route = {
+                    "name": user_input.get("route_name", "").strip() or None,
+                    "start": start,
+                    "end": end,
+                    "priority": user_input.get("priority", "traoptimal"),
+                }
+                self._temp_waypoints = []
                 
-                if not start or not end:
-                    errors["base"] = "missing_location"
-                else:
-                    # Generate unique route_id
-                    existing_ids = [int(rid.split('_')[1]) for rid in self.routes.keys() if rid.startswith('route_')]
-                    new_id = max(existing_ids) + 1 if existing_ids else 1
-                    route_id = f"route_{new_id}"
-                    
-                    self.routes[route_id] = {
-                        "start": start,
-                        "end": end,
-                        "waypoint": waypoint,
-                        "priority": user_input.get("priority", "TIME"),
-                        "name": route_name if route_name else None,
-                    }
-                    _LOGGER.info(f"Route added: {route_id} -> {self.routes[route_id]}")
-                    _LOGGER.debug(f"Total routes now: {list(self.routes.keys())}")
-                    return await self.async_step_route_list()
+                if action == "add_waypoint":
+                    return await self.async_step_add_waypoint()
+                elif action == "confirm":
+                    return await self._save_route()
 
         data_schema = vol.Schema({
             vol.Optional("route_name"): selector.TextSelector(
@@ -216,6 +225,64 @@ class NaverMapsOptionsFlowHandler(config_entries.OptionsFlow):
                     type=selector.TextSelectorType.TEXT,
                 )
             ),
+            vol.Optional("priority", default="traoptimal"): vol.In({
+                "traoptimal": "실시간 최적 (Optimal)",
+                "trafast": "실시간 빠른 길 (Fastest)",
+                "tracomfort": "실시간 편한 길 (Comfortable)",
+                "traavoidtoll": "무료 우선 (Avoid Toll)",
+                "traavoidcaronly": "자동차 전용 도로 회피 (Avoid Car-Only)",
+            }),
+            vol.Required("action"): vol.In({
+                "cancel": "⬅️ 취소",
+                "add_waypoint": "📍 경유지 추가",
+                "confirm": "✅ 경로 저장",
+            }),
+        })
+
+        return self.async_show_form(
+            step_id="add_route",
+            data_schema=data_schema,
+            errors=errors,
+            description_placeholders={
+                "tip": "엔티티(device_tracker/person/zone)를 선택하거나 주소를 입력하세요. 엔티티 선택이 우선됩니다."
+            },
+        )
+
+    async def async_step_add_waypoint(self, user_input=None):
+        """Add a waypoint to the route."""
+        errors = {}
+        current_count = len(self._temp_waypoints)
+        
+        if user_input is not None:
+            action = user_input.get("action")
+            
+            if action == "back":
+                # Go back to route editing without adding waypoint
+                return await self.async_step_waypoint_list()
+            
+            # Get waypoint
+            waypoint = user_input.get("waypoint_entity") or user_input.get("waypoint", "")
+            
+            if not waypoint:
+                errors["base"] = "missing_waypoint"
+            else:
+                self._temp_waypoints.append(waypoint)
+                _LOGGER.info(f"Added waypoint: {waypoint}, total: {len(self._temp_waypoints)}")
+                
+                if action == "add_more" and len(self._temp_waypoints) < MAX_WAYPOINTS:
+                    return await self.async_step_add_waypoint()
+                else:
+                    return await self.async_step_waypoint_list()
+
+        # Build action options
+        actions = {
+            "back": "⬅️ 취소",
+            "confirm": "✅ 추가",
+        }
+        if current_count < MAX_WAYPOINTS - 1:
+            actions["add_more"] = "➕ 추가 후 경유지 더 추가"
+
+        data_schema = vol.Schema({
             vol.Optional("waypoint_entity"): selector.EntitySelector(
                 selector.EntitySelectorConfig(
                     domain=["device_tracker", "person", "zone"],
@@ -227,24 +294,93 @@ class NaverMapsOptionsFlowHandler(config_entries.OptionsFlow):
                     type=selector.TextSelectorType.TEXT,
                 )
             ),
-            vol.Optional("priority", default="traoptimal"): vol.In({
-                "traoptimal": "Optimal (Recommended)",
-                "trafast": "Fastest Route",
-                "tracomfort": "Comfortable Route",
-                "traavoidtoll": "Avoid Toll Roads",
-                "traavoidcaronly": "Avoid Car-Only Roads",
-            }),
-            vol.Required("action"): vol.In({
-                "cancel": "⬅️ Back",
-                "confirm": "✅ Add Route",
-            }),
+            vol.Required("action"): vol.In(actions),
         })
 
         return self.async_show_form(
-            step_id="add_route",
+            step_id="add_waypoint",
             data_schema=data_schema,
             errors=errors,
             description_placeholders={
-                "tip": "Choose an entity (device_tracker/person/zone) OR enter an address. Entity selection takes priority."
+                "count": str(current_count + 1),
+                "max": str(MAX_WAYPOINTS),
             },
         )
+
+    async def async_step_waypoint_list(self, user_input=None):
+        """Show list of waypoints and allow management."""
+        if user_input is not None:
+            action = user_input.get("action")
+            
+            if action == "add_waypoint" and len(self._temp_waypoints) < MAX_WAYPOINTS:
+                return await self.async_step_add_waypoint()
+            elif action == "save":
+                return await self._save_route()
+            elif action == "back":
+                # Go back to add_route to re-edit basic info
+                return await self.async_step_add_route()
+            elif action.startswith("delete_"):
+                idx = int(action.replace("delete_", ""))
+                if 0 <= idx < len(self._temp_waypoints):
+                    removed = self._temp_waypoints.pop(idx)
+                    _LOGGER.info(f"Removed waypoint: {removed}")
+                return await self.async_step_waypoint_list()
+
+        # Build actions
+        actions = {
+            "back": "⬅️ 기본 정보 수정",
+            "save": "✅ 경로 저장",
+        }
+        
+        if len(self._temp_waypoints) < MAX_WAYPOINTS:
+            actions["add_waypoint"] = f"📍 경유지 추가 ({len(self._temp_waypoints)}/{MAX_WAYPOINTS})"
+        
+        # Show current waypoints with delete option
+        for idx, wp in enumerate(self._temp_waypoints):
+            actions[f"delete_{idx}"] = f"🗑️ 경유지 {idx + 1}: {wp}"
+
+        data_schema = vol.Schema({
+            vol.Required("action"): vol.In(actions),
+        })
+
+        # Build description showing current route info
+        route_info = f"출발: {self._temp_route.get('start')}\n도착: {self._temp_route.get('end')}"
+        if self._temp_waypoints:
+            route_info += f"\n경유지: {len(self._temp_waypoints)}개"
+
+        return self.async_show_form(
+            step_id="waypoint_list",
+            data_schema=data_schema,
+            description_placeholders={
+                "route_info": route_info,
+                "waypoint_count": str(len(self._temp_waypoints)),
+                "max_waypoints": str(MAX_WAYPOINTS),
+            },
+        )
+
+    async def _save_route(self):
+        """Save the route with all waypoints."""
+        # Generate unique route_id
+        existing_ids = [int(rid.split('_')[1]) for rid in self.routes.keys() if rid.startswith('route_')]
+        new_id = max(existing_ids) + 1 if existing_ids else 1
+        route_id = f"route_{new_id}"
+        
+        route_data = {
+            "start": self._temp_route.get("start"),
+            "end": self._temp_route.get("end"),
+            "priority": self._temp_route.get("priority", "traoptimal"),
+            "name": self._temp_route.get("name"),
+        }
+        
+        # Store waypoints
+        if self._temp_waypoints:
+            route_data["waypoints"] = list(self._temp_waypoints)
+        
+        self.routes[route_id] = route_data
+        _LOGGER.info(f"Route saved: {route_id} -> {route_data}")
+        
+        # Clear temp storage
+        self._temp_route = {}
+        self._temp_waypoints = []
+        
+        return await self.async_step_route_list()

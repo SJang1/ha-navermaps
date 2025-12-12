@@ -5,7 +5,7 @@ import logging
 import hashlib
 from datetime import datetime, timedelta
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass, SensorDeviceClass
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -29,10 +29,16 @@ class NaverMapsApiClient:
             "x-ncp-apigw-api-key": api_key
         })
         _LOGGER.debug(f"NaverMapsApiClient initialized with api_key_id: {api_key_id[:10] if api_key_id else 'EMPTY'}")
-        self._cache = {}
         self._hass = hass
+        
+        # Use shared geocode cache from hass.data (persists across updates)
+        # Only for text addresses, not for entity locations
+        if hass and DOMAIN in hass.data and "geocode_cache" in hass.data[DOMAIN]:
+            self._geocode_cache = hass.data[DOMAIN]["geocode_cache"]
+        else:
+            self._geocode_cache = {}
 
-    def direction(self, start: str, end: str, waypoint: str | None = None, priority: str = "traoptimal"):
+    def direction(self, start: str, end: str, waypoints: list | str | None = None, priority: str = "traoptimal"):
         try:
             start_point = self.address(start)
             if not start_point:
@@ -50,11 +56,20 @@ class NaverMapsApiClient:
             _end = f"{end_point.get('x')},{end_point.get('y')}"
             _LOGGER.debug(f"End point: {_end}")
             
-            _waypoint = None
-            if waypoint:
-                waypoint_point = self.address(waypoint)
-                if waypoint_point:
-                    _waypoint = f"{waypoint_point.get('x')},{waypoint_point.get('y')}"
+            # Handle waypoints (can be list or single string for backwards compatibility)
+            _waypoints_str = None
+            if waypoints:
+                waypoint_list = waypoints if isinstance(waypoints, list) else [waypoints]
+                waypoint_coords = []
+                for wp in waypoint_list:
+                    if wp:
+                        wp_point = self.address(wp)
+                        if wp_point:
+                            waypoint_coords.append(f"{wp_point.get('x')},{wp_point.get('y')}")
+                if waypoint_coords:
+                    # Naver API uses | to separate multiple waypoints
+                    _waypoints_str = "|".join(waypoint_coords)
+                    _LOGGER.debug(f"Waypoints: {_waypoints_str}")
 
             params = {
                 "start": _start,
@@ -62,8 +77,8 @@ class NaverMapsApiClient:
                 "option": priority,
             }
             
-            if _waypoint:
-                params["waypoints"] = _waypoint
+            if _waypoints_str:
+                params["waypoints"] = _waypoints_str
 
             _LOGGER.debug(f"Direction API call with params: {params}")
             resp = self.rs.get("https://maps.apigw.ntruss.com/map-direction/v1/driving", params=params)
@@ -89,15 +104,18 @@ class NaverMapsApiClient:
             return None
         
         # Check if it's a device tracker/person/zone entity
+        # These are NOT cached because their location can change
         if query.startswith(("device_tracker.", "person.", "zone.", "sensor.")):
             location = self._get_entity_location(query)
             if location:
                 return location
             # If entity lookup fails, don't try to look it up as address
             return None
-            
-        if self._cache.get(query) is not None:
-            return self._cache.get(query)
+        
+        # For text addresses, use persistent geocode cache
+        if query in self._geocode_cache:
+            _LOGGER.debug(f"Using cached geocode for: {query}")
+            return self._geocode_cache[query]
             
         try:
             resp = self.rs.get("https://maps.apigw.ntruss.com/map-geocode/v2/geocode", params={
@@ -119,7 +137,9 @@ class NaverMapsApiClient:
                 "x": addresses[0].get("x"),
                 "y": addresses[0].get("y")
             }
-            self._cache[query] = result
+            # Save to persistent cache
+            self._geocode_cache[query] = result
+            _LOGGER.info(f"Cached geocode for address: {query} -> ({result['x']}, {result['y']})")
             return result
         except Exception as e:
             _LOGGER.error(f"Error looking up address {query}: {e}")
@@ -314,7 +334,12 @@ async def async_setup_entry(
     
     entities = []
     for route_id, route_data in routes.items():
-        _LOGGER.info(f"Creating sensor for route {route_id}: {route_data.get('start')} -> {route_data.get('end')}")
+        # Support both old 'waypoint' (single) and new 'waypoints' (list) format
+        waypoints = route_data.get("waypoints", [])
+        if not waypoints and route_data.get("waypoint"):
+            waypoints = [route_data.get("waypoint")]
+        
+        _LOGGER.info(f"Creating sensor for route {route_id}: {route_data.get('start')} -> {route_data.get('end')} (waypoints: {len(waypoints)})")
         entities.append(
             NaverMapsEta(
                 api_key_id=api_key_id,
@@ -322,7 +347,7 @@ async def async_setup_entry(
                 route_id=route_id,
                 start=route_data.get("start"),
                 end=route_data.get("end"),
-                waypoint=route_data.get("waypoint", ""),
+                waypoints=waypoints,
                 priority=route_data.get("priority", "traoptimal"),
                 entry_id=config_entry.entry_id,
                 route_name=route_data.get("name"),
@@ -400,12 +425,18 @@ async def async_setup_entry(
 class NaverMapsEta(SensorEntity):
     """Representation of a Naver Maps ETA sensor."""
 
-    def __init__(self, api_key_id, api_key, route_id, start, end, waypoint, priority, entry_id, route_name=None, scan_interval_minutes=10):
+    def __init__(self, api_key_id, api_key, route_id, start, end, waypoints, priority, entry_id, route_name=None, scan_interval_minutes=10):
         """Initialize the sensor."""
         self._route_id = route_id
         self._start = start
         self._end = end
-        self._waypoint = waypoint if waypoint else None
+        # Support both list and single waypoint for backwards compatibility
+        if isinstance(waypoints, list):
+            self._waypoints = [wp for wp in waypoints if wp]
+        elif waypoints:
+            self._waypoints = [waypoints]
+        else:
+            self._waypoints = []
         self._priority = priority
         self._api_key_id = api_key_id
         self._api_key = api_key
@@ -419,8 +450,11 @@ class NaverMapsEta(SensorEntity):
             self._attr_name = route_name
         else:
             route_name_auto = f"{start} to {end}"
-            if self._waypoint:
-                route_name_auto += f" via {waypoint}"
+            if self._waypoints:
+                if len(self._waypoints) == 1:
+                    route_name_auto += f" via {self._waypoints[0]}"
+                else:
+                    route_name_auto += f" ({len(self._waypoints)} waypoints)"
             self._attr_name = route_name_auto
         
         # Create unique ID
@@ -513,9 +547,13 @@ class NaverMapsEta(SensorEntity):
             end_name = self._get_friendly_name(self._end)
             
             route_name = f"{start_name} to {end_name}"
-            if self._waypoint:
-                waypoint_name = self._get_friendly_name(self._waypoint)
-                route_name += f" via {waypoint_name}"
+            if self._waypoints:
+                if len(self._waypoints) == 1:
+                    waypoint_name = self._get_friendly_name(self._waypoints[0])
+                    route_name += f" via {waypoint_name}"
+                else:
+                    waypoint_names = [self._get_friendly_name(wp) for wp in self._waypoints]
+                    route_name += f" via {', '.join(waypoint_names)}"
             
             self._attr_name = route_name
         except Exception as e:
@@ -537,7 +575,7 @@ class NaverMapsEta(SensorEntity):
             result = client.direction(
                 self._start,
                 self._end,
-                self._waypoint,
+                self._waypoints if self._waypoints else None,
                 self._priority
             )
             
@@ -564,7 +602,8 @@ class NaverMapsEta(SensorEntity):
                         "duration_seconds": round(duration_ms / 1000),
                         "start": self._start,
                         "end": self._end,
-                        "waypoint": self._waypoint,
+                        "waypoints": self._waypoints if self._waypoints else None,
+                        "waypoint_count": len(self._waypoints),
                         "priority": self._priority,
                         "toll_fare": summary.get("tollFare", 0),
                         "taxi_fare": summary.get("taxiFare", 0),
