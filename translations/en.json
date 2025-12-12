@@ -36,9 +36,9 @@
         "data": {
           "route_name": "Route Name (optional)",
           "start_entity": "Start Location (Entity)",
-          "start": "Start Address (Text)",
+          "start": "Start (Address or longitude,latitude)",
           "end_entity": "End Location (Entity)",
-          "end": "End Address (Text)",
+          "end": "End (Address or longitude,latitude)",
           "priority": "Route Priority",
           "action": "Action"
         }
@@ -48,7 +48,7 @@
         "description": "Select a waypoint entity or enter an address",
         "data": {
           "waypoint_entity": "Waypoint (Entity)",
-          "waypoint": "Waypoint Address (Text)",
+          "waypoint": "Waypoint (Address or longitude,latitude)",
           "action": "Action"
         }
       },

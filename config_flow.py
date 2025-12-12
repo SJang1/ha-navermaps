@@ -244,7 +244,7 @@ class NaverMapsOptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=data_schema,
             errors=errors,
             description_placeholders={
-                "tip": "엔티티(device_tracker/person/zone)를 선택하거나 주소를 입력하세요. 엔티티 선택이 우선됩니다."
+                "tip": "엔티티 선택, 주소 입력, 또는 좌표(경도,위도) 입력 가능. 예: 127.12345,37.12345"
             },
         )
 

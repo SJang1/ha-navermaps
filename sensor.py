@@ -3,6 +3,7 @@ import asyncio
 import requests
 import logging
 import hashlib
+import re
 from datetime import datetime, timedelta
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
@@ -16,7 +17,10 @@ from homeassistant.helpers.event import async_track_time_interval
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "ha-navermaps"
-SCAN_INTERVAL = timedelta(minutes=10) 
+SCAN_INTERVAL = timedelta(minutes=10)
+
+# Pattern for direct coordinate input: "longitude,latitude" (e.g., "127.12345,37.12345")
+COORD_PATTERN = re.compile(r'^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)$')
 
 
 class NaverMapsApiClient:
@@ -102,6 +106,13 @@ class NaverMapsApiClient:
     def address(self, query):
         if not query:
             return None
+        
+        # Check if it's direct coordinates (longitude,latitude format)
+        coord_match = COORD_PATTERN.match(query.strip())
+        if coord_match:
+            x, y = coord_match.groups()
+            _LOGGER.debug(f"Using direct coordinates: x={x}, y={y}")
+            return {"x": x, "y": y}
         
         # Check if it's a device tracker/person/zone entity
         # These are NOT cached because their location can change
