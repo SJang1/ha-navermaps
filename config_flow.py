@@ -1,4 +1,3 @@
-"""Config flow for Kakao Navi integration."""
 import logging
 import asyncio
 import voluptuous as vol
@@ -13,7 +12,7 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = "ha-navermaps"
 
 class NaverMapsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Kakao Navi."""
+    """Handle a config flow for Naver Maps."""
 
     VERSION = 1
 

@@ -2,16 +2,16 @@
   "config": {
     "step": {
       "user": {
-        "title": "Kakao Navi 설정",
-        "description": "Kakao API 키를 입력하세요. {info}",
+        "title": "Naver Maps Directions 설정",
+        "description": "Naver API 키를 입력하세요. {info}",
         "data": {
-          "api_key": "Kakao API 키"
+          "api_key": "Naver API 키"
         }
       }
     },
     "error": {
       "invalid_auth": "유효하지 않은 API 키",
-      "cannot_connect": "Kakao API에 연결할 수 없습니다",
+      "cannot_connect": "Naver API에 연결할 수 없습니다",
       "unknown": "알 수 없는 오류가 발생했습니다",
       "missing_location": "출발지와 도착지를 입력하세요"
     },

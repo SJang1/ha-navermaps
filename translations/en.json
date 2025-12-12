@@ -2,16 +2,16 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up Kakao Navi",
-        "description": "Enter your Kakao API key. {info}",
+        "title": "Set up Naver Maps Directions",
+        "description": "Enter your Naver API key. {info}",
         "data": {
-          "api_key": "Kakao API Key"
+          "api_key": "Naver API Key"
         }
       }
     },
     "error": {
       "invalid_auth": "Invalid API key",
-      "cannot_connect": "Cannot connect to Kakao API",
+      "cannot_connect": "Cannot connect to Naver API",
       "unknown": "Unknown error occurred",
       "missing_location": "Please provide start and end locations"
     },
