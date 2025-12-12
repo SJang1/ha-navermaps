@@ -24,24 +24,28 @@ class NaverMapsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             # Validate API keys
-            api_key_id = user_input.get("X-NCP-APIGW-API-KEY-ID")
-            api_key = user_input.get("X-NCP-APIGW-API-KEY")
+            api_key_id = user_input.get("X-NCP-APIGW-API-KEY-ID", "").strip()
+            api_key = user_input.get("X-NCP-APIGW-API-KEY", "").strip()
             
-            # Create unique ID based on API key ID
-            await self.async_set_unique_id(api_key_id)
-            self._abort_if_unique_id_configured()
+            # Validate that credentials are not empty
+            if not api_key_id or not api_key:
+                errors["base"] = "invalid_auth"
+            else:
+                # Create unique ID based on API key ID
+                await self.async_set_unique_id(api_key_id)
+                self._abort_if_unique_id_configured()
 
-            return self.async_create_entry(
-                title="Naver Maps",
-                data={
-                    "api_key_id": api_key_id,
-                    "api_key": api_key,
-                },
-                options={
-                    "routes": {},
-                    "scan_interval": 10,  # Default scan interval
-                }
-            )
+                return self.async_create_entry(
+                    title="Naver Maps",
+                    data={
+                        "api_key_id": api_key_id,
+                        "api_key": api_key,
+                    },
+                    options={
+                        "routes": {},
+                        "scan_interval": 10,  # Default scan interval
+                    }
+                )
 
         data_schema = vol.Schema({
             vol.Required("X-NCP-APIGW-API-KEY-ID"): str,
@@ -54,6 +58,92 @@ class NaverMapsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
             description_placeholders={
                 "info": "Enter your Naver Cloud Platform Maps API credentials. Get them from Naver Cloud Console."
+            },
+        )
+
+    async def async_step_reconfigure(self, user_input=None):
+        """Handle reconfiguration of API credentials."""
+        errors = {}
+        config_entry = self.hass.config_entries.async_get_entry(
+            self.context["entry_id"]
+        )
+        
+        # Safety check - should not happen but handle gracefully
+        if not config_entry:
+            return self.async_abort(reason="unknown")
+
+        if user_input is not None:
+            # Extract new API keys
+            api_key_id = user_input.get("X-NCP-APIGW-API-KEY-ID", "").strip()
+            api_key = user_input.get("X-NCP-APIGW-API-KEY", "").strip()
+            
+            # Validate that credentials are not empty
+            if not api_key_id or not api_key:
+                errors["base"] = "invalid_auth"
+            else:
+                # Check if new API Key ID conflicts with another entry
+                # (but allow it if it's the same as current entry's unique_id)
+                for entry in self.hass.config_entries.async_entries(DOMAIN):
+                    if entry.unique_id == api_key_id and entry.entry_id != config_entry.entry_id:
+                        errors["base"] = "already_configured"
+                        break
+                
+                if not errors:
+                    # Update the config entry with new credentials while preserving other data
+                    self.hass.config_entries.async_update_entry(
+                        config_entry,
+                        data={
+                            **config_entry.data,  # Preserve existing data
+                            "api_key_id": api_key_id,
+                            "api_key": api_key,
+                        },
+                    )
+                    
+                    # If API Key ID changed, update the unique_id
+                    if config_entry.unique_id != api_key_id:
+                        self.hass.config_entries.async_update_entry(
+                            config_entry,
+                            unique_id=api_key_id,
+                        )
+                    
+                    # Reload the integration to use new credentials
+                    await self.hass.config_entries.async_reload(config_entry.entry_id)
+                    
+                    return self.async_abort(reason="reconfigure_successful")
+
+        # Pre-fill with current values (masked for security)
+        current_api_key_id = config_entry.data.get("api_key_id", "")
+        current_api_key = config_entry.data.get("api_key", "")
+        
+        # Mask credentials for security (show only first 4 and last 4 characters)
+        if len(current_api_key_id) > 8:
+            masked_api_key_id = current_api_key_id[:4] + "..." + current_api_key_id[-4:]
+        else:
+            masked_api_key_id = "***" if current_api_key_id else ""
+            
+        if len(current_api_key) > 8:
+            masked_api_key = current_api_key[:4] + "..." + current_api_key[-4:]
+        else:
+            masked_api_key = "***" if current_api_key else ""
+        
+        # Use empty defaults to avoid users having to clear masked values
+        # Show masked values in description instead
+        data_schema = vol.Schema({
+            vol.Required("X-NCP-APIGW-API-KEY-ID"): str,
+            vol.Required("X-NCP-APIGW-API-KEY"): str,
+        })
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=data_schema,
+            errors=errors,
+            description_placeholders={
+                "info": "\n".join([
+                    f"Current API Key ID: {masked_api_key_id}",
+                    f"Current API Key: {masked_api_key}",
+                    "",
+                    "Enter your new Naver Cloud Platform Maps API credentials."
+                ])
             },
         )
 

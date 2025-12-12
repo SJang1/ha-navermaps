@@ -5,7 +5,16 @@
         "title": "Naver Maps Directions 설정",
         "description": "Naver API 키를 입력하세요. {info}",
         "data": {
-          "api_key": "Naver API 키"
+          "X-NCP-APIGW-API-KEY-ID": "API Key ID",
+          "X-NCP-APIGW-API-KEY": "API Key (Secret)"
+        }
+      },
+      "reconfigure": {
+        "title": "Naver Maps API 자격 증명 재설정",
+        "description": "{info}",
+        "data": {
+          "X-NCP-APIGW-API-KEY-ID": "API Key ID",
+          "X-NCP-APIGW-API-KEY": "API Key (Secret)"
         }
       }
     },
@@ -17,7 +26,8 @@
       "missing_waypoint": "경유지를 입력하세요"
     },
     "abort": {
-      "already_configured": "이 API 키는 이미 설정되어 있습니다"
+      "already_configured": "이 API 키는 이미 설정되어 있습니다",
+      "reconfigure_successful": "API 자격 증명이 성공적으로 업데이트되었습니다"
     }
   },
   "options": {
