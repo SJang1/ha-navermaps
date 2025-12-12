@@ -24,24 +24,28 @@ class NaverMapsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             # Validate API keys
-            api_key_id = user_input.get("X-NCP-APIGW-API-KEY-ID")
-            api_key = user_input.get("X-NCP-APIGW-API-KEY")
+            api_key_id = user_input.get("X-NCP-APIGW-API-KEY-ID", "").strip()
+            api_key = user_input.get("X-NCP-APIGW-API-KEY", "").strip()
             
-            # Create unique ID based on API key ID
-            await self.async_set_unique_id(api_key_id)
-            self._abort_if_unique_id_configured()
+            # Validate that credentials are not empty
+            if not api_key_id or not api_key:
+                errors["base"] = "invalid_auth"
+            else:
+                # Create unique ID based on API key ID
+                await self.async_set_unique_id(api_key_id)
+                self._abort_if_unique_id_configured()
 
-            return self.async_create_entry(
-                title="Naver Maps",
-                data={
-                    "api_key_id": api_key_id,
-                    "api_key": api_key,
-                },
-                options={
-                    "routes": {},
-                    "scan_interval": 10,  # Default scan interval
-                }
-            )
+                return self.async_create_entry(
+                    title="Naver Maps",
+                    data={
+                        "api_key_id": api_key_id,
+                        "api_key": api_key,
+                    },
+                    options={
+                        "routes": {},
+                        "scan_interval": 10,  # Default scan interval
+                    }
+                )
 
         data_schema = vol.Schema({
             vol.Required("X-NCP-APIGW-API-KEY-ID"): str,
@@ -66,23 +70,27 @@ class NaverMapsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             # Extract new API keys
-            api_key_id = user_input.get("X-NCP-APIGW-API-KEY-ID")
-            api_key = user_input.get("X-NCP-APIGW-API-KEY")
+            api_key_id = user_input.get("X-NCP-APIGW-API-KEY-ID", "").strip()
+            api_key = user_input.get("X-NCP-APIGW-API-KEY", "").strip()
             
-            # Update the config entry with new credentials while preserving other data
-            self.hass.config_entries.async_update_entry(
-                config_entry,
-                data={
-                    **config_entry.data,  # Preserve existing data
-                    "api_key_id": api_key_id,
-                    "api_key": api_key,
-                },
-            )
-            
-            # Reload the integration to use new credentials
-            await self.hass.config_entries.async_reload(config_entry.entry_id)
-            
-            return self.async_abort(reason="reconfigure_successful")
+            # Validate that credentials are not empty
+            if not api_key_id or not api_key:
+                errors["base"] = "invalid_auth"
+            else:
+                # Update the config entry with new credentials while preserving other data
+                self.hass.config_entries.async_update_entry(
+                    config_entry,
+                    data={
+                        **config_entry.data,  # Preserve existing data
+                        "api_key_id": api_key_id,
+                        "api_key": api_key,
+                    },
+                )
+                
+                # Reload the integration to use new credentials
+                await self.hass.config_entries.async_reload(config_entry.entry_id)
+                
+                return self.async_abort(reason="reconfigure_successful")
 
         # Pre-fill with current values (masked for security)
         current_api_key_id = config_entry.data.get("api_key_id", "")
