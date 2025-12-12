@@ -8,7 +8,6 @@
     "requirements": ["requests"],
     "version": "2.0.0",
     "config_flow": true,
-    "iot_class": "cloud_polling",
-    "icon": "naver-map-icon.jpg"
+    "iot_class": "cloud_polling"
   }
   
