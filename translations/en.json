@@ -7,6 +7,14 @@
         "data": {
           "api_key": "Naver API Key"
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Naver Maps API Credentials",
+        "description": "{info}",
+        "data": {
+          "X-NCP-APIGW-API-KEY-ID": "API Key ID",
+          "X-NCP-APIGW-API-KEY": "API Key (Secret)"
+        }
       }
     },
     "error": {
@@ -17,7 +25,8 @@
       "missing_waypoint": "Please provide a waypoint"
     },
     "abort": {
-      "already_configured": "This API key is already configured"
+      "already_configured": "This API key is already configured",
+      "reconfigure_successful": "API credentials updated successfully"
     }
   },
   "options": {

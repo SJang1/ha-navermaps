@@ -7,6 +7,14 @@
         "data": {
           "api_key": "Kakao API Key"
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Naver Maps API Credentials",
+        "description": "Enter your new Naver Cloud Platform Maps API credentials.",
+        "data": {
+          "X-NCP-APIGW-API-KEY-ID": "API Key ID",
+          "X-NCP-APIGW-API-KEY": "API Key (Secret)"
+        }
       }
     },
     "error": {
@@ -15,7 +23,8 @@
       "unknown": "An unknown error occurred"
     },
     "abort": {
-      "already_configured": "This API key is already configured"
+      "already_configured": "This API key is already configured",
+      "reconfigure_successful": "API credentials updated successfully"
     }
   },
   "options": {

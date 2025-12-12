@@ -57,6 +57,50 @@ class NaverMapsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             },
         )
 
+    async def async_step_reconfigure(self, user_input=None):
+        """Handle reconfiguration of API credentials."""
+        errors = {}
+        config_entry = self.hass.config_entries.async_get_entry(
+            self.context["entry_id"]
+        )
+
+        if user_input is not None:
+            # Validate API keys
+            api_key_id = user_input.get("X-NCP-APIGW-API-KEY-ID")
+            api_key = user_input.get("X-NCP-APIGW-API-KEY")
+            
+            # Update the config entry with new credentials
+            self.hass.config_entries.async_update_entry(
+                config_entry,
+                data={
+                    "api_key_id": api_key_id,
+                    "api_key": api_key,
+                },
+            )
+            
+            # Reload the integration to use new credentials
+            await self.hass.config_entries.async_reload(config_entry.entry_id)
+            
+            return self.async_abort(reason="reconfigure_successful")
+
+        # Pre-fill with current values (partially masked for security)
+        current_api_key_id = config_entry.data.get("api_key_id", "")
+        current_api_key = config_entry.data.get("api_key", "")
+        
+        data_schema = vol.Schema({
+            vol.Required("X-NCP-APIGW-API-KEY-ID", default=current_api_key_id): str,
+            vol.Required("X-NCP-APIGW-API-KEY", default=current_api_key): str,
+        })
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=data_schema,
+            errors=errors,
+            description_placeholders={
+                "info": "Enter your new Naver Cloud Platform Maps API credentials."
+            },
+        )
+
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
