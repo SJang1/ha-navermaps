@@ -2,10 +2,11 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up Kakao Navi",
-        "description": "Enter your Kakao API key to get started. After adding the integration, configure your routes in the options.",
+        "title": "Set up Naver Maps Directions",
+        "description": "Enter your Naver API key to get started. After adding the integration, configure your routes in the options.",
         "data": {
-          "api_key": "Kakao API Key"
+          "X-NCP-APIGW-API-KEY-ID": "API Key ID",
+          "X-NCP-APIGW-API-KEY": "API Key (Secret)"
         }
       },
       "reconfigure": {
@@ -19,7 +20,7 @@
     },
     "error": {
       "invalid_auth": "Invalid API key provided",
-      "cannot_connect": "Cannot connect to Kakao API servers",
+      "cannot_connect": "Cannot connect to Naver API servers",
       "unknown": "An unknown error occurred"
     },
     "abort": {

@@ -5,7 +5,8 @@
         "title": "Set up Naver Maps Directions",
         "description": "Enter your Naver API key. {info}",
         "data": {
-          "api_key": "Naver API Key"
+          "X-NCP-APIGW-API-KEY-ID": "API Key ID",
+          "X-NCP-APIGW-API-KEY": "API Key (Secret)"
         }
       },
       "reconfigure": {

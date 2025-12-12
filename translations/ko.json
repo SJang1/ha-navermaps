@@ -5,7 +5,8 @@
         "title": "Naver Maps Directions 설정",
         "description": "Naver API 키를 입력하세요. {info}",
         "data": {
-          "api_key": "Naver API 키"
+          "X-NCP-APIGW-API-KEY-ID": "API Key ID",
+          "X-NCP-APIGW-API-KEY": "API Key (Secret)"
         }
       },
       "reconfigure": {

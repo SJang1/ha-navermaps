@@ -65,14 +65,15 @@ class NaverMapsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
         if user_input is not None:
-            # Validate API keys
+            # Extract new API keys
             api_key_id = user_input.get("X-NCP-APIGW-API-KEY-ID")
             api_key = user_input.get("X-NCP-APIGW-API-KEY")
             
-            # Update the config entry with new credentials
+            # Update the config entry with new credentials while preserving other data
             self.hass.config_entries.async_update_entry(
                 config_entry,
                 data={
+                    **config_entry.data,  # Preserve existing data
                     "api_key_id": api_key_id,
                     "api_key": api_key,
                 },
@@ -83,13 +84,19 @@ class NaverMapsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             
             return self.async_abort(reason="reconfigure_successful")
 
-        # Pre-fill with current values (partially masked for security)
+        # Pre-fill with current values (masked for security)
         current_api_key_id = config_entry.data.get("api_key_id", "")
         current_api_key = config_entry.data.get("api_key", "")
         
+        # Mask the API key for security (show only first 4 and last 4 characters)
+        if len(current_api_key) > 8:
+            masked_api_key = current_api_key[:4] + "..." + current_api_key[-4:]
+        else:
+            masked_api_key = "***"
+        
         data_schema = vol.Schema({
             vol.Required("X-NCP-APIGW-API-KEY-ID", default=current_api_key_id): str,
-            vol.Required("X-NCP-APIGW-API-KEY", default=current_api_key): str,
+            vol.Required("X-NCP-APIGW-API-KEY", default=masked_api_key): str,
         })
 
         return self.async_show_form(
