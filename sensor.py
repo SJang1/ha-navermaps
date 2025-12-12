@@ -5,7 +5,7 @@ import logging
 import hashlib
 from datetime import datetime, timedelta
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorStateClass, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -431,6 +431,7 @@ class NaverMapsEta(SensorEntity):
         self._attr_native_value = None
         self._attr_extra_state_attributes = {}
         self._attr_native_unit_of_measurement = UnitOfTime.MINUTES
+        self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_icon = "mdi:map-marker-distance"
         self._attr_has_entity_name = False
         self._last_update = None
