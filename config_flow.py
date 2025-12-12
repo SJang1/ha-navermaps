@@ -96,15 +96,22 @@ class NaverMapsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         current_api_key_id = config_entry.data.get("api_key_id", "")
         current_api_key = config_entry.data.get("api_key", "")
         
-        # Mask the API key for security (show only first 4 and last 4 characters)
+        # Mask credentials for security (show only first 4 and last 4 characters)
+        if len(current_api_key_id) > 8:
+            masked_api_key_id = current_api_key_id[:4] + "..." + current_api_key_id[-4:]
+        else:
+            masked_api_key_id = "***" if current_api_key_id else ""
+            
         if len(current_api_key) > 8:
             masked_api_key = current_api_key[:4] + "..." + current_api_key[-4:]
         else:
-            masked_api_key = "***"
+            masked_api_key = "***" if current_api_key else ""
         
+        # Use empty defaults to avoid users having to clear masked values
+        # Show masked values in description instead
         data_schema = vol.Schema({
-            vol.Required("X-NCP-APIGW-API-KEY-ID", default=current_api_key_id): str,
-            vol.Required("X-NCP-APIGW-API-KEY", default=masked_api_key): str,
+            vol.Required("X-NCP-APIGW-API-KEY-ID"): str,
+            vol.Required("X-NCP-APIGW-API-KEY"): str,
         })
 
         return self.async_show_form(
@@ -112,7 +119,7 @@ class NaverMapsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=data_schema,
             errors=errors,
             description_placeholders={
-                "info": "Enter your new Naver Cloud Platform Maps API credentials."
+                "info": f"Current API Key ID: {masked_api_key_id}\nCurrent API Key: {masked_api_key}\n\nEnter your new Naver Cloud Platform Maps API credentials."
             },
         )
 
