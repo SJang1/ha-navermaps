@@ -191,129 +191,6 @@ class NaverMapsApiClient:
         except Exception as e:
             _LOGGER.error(f"Error getting entity location {entity_id}: {e}")
             return None
-    
-    def reverse_geocode(self, longitude: float, latitude: float, orders: str = "roadaddr,addr"):
-        """
-        Convert coordinates to address information using reverse geocoding.
-        
-        Args:
-            longitude: Longitude (X coordinate)
-            latitude: Latitude (Y coordinate)
-            orders: Conversion types, comma-separated. Options: legalcode, admcode, addr, roadaddr
-                   Default: "roadaddr,addr" (road address and land address)
-        
-        Returns:
-            dict: Response data with address information, or None on error
-        """
-        try:
-            params = {
-                "coords": f"{longitude},{latitude}",
-                "output": "json",
-                "orders": orders
-            }
-            
-            resp = self.rs.get(
-                "https://maps.apigw.ntruss.com/map-reversegeocode/v2/gc",
-                params=params
-            )
-            
-            if resp.status_code != 200:
-                _LOGGER.error(f"Reverse geocoding API error: {resp.status_code} - {resp.text}")
-                return None
-            
-            data = resp.json()
-            
-            if data.get("status", {}).get("code") != 0:
-                _LOGGER.error(f"Reverse geocoding error: {data.get('status', {}).get('message')}")
-                return None
-            
-            return data
-            
-        except Exception as e:
-            _LOGGER.error(f"Error in reverse geocoding: {e}")
-            return None
-    
-    def get_address_from_coords(self, longitude: float, latitude: float):
-        """
-        Get formatted address string from coordinates.
-        
-        Args:
-            longitude: Longitude (X coordinate)
-            latitude: Latitude (Y coordinate)
-        
-        Returns:
-            dict: Contains 'road_address' and 'land_address', or None on error
-        """
-        data = self.reverse_geocode(longitude, latitude, "roadaddr,addr")
-        
-        if not data or not data.get("results"):
-            return None
-        
-        result: dict[str, str | None] = {
-            "road_address": None,
-            "land_address": None,
-            "area1": None,  # Province/City (시/도)
-            "area2": None,  # District/County (시/군/구)
-            "area3": None,  # Town/Neighborhood (읍/면/동)
-            "area4": None,  # Village (리)
-        }
-        
-        for item in data.get("results", []):
-            name = item.get("name")
-            region = item.get("region", {})
-            land = item.get("land", {})
-            
-            # Extract area information
-            if region:
-                if region.get("area1", {}).get("name"):
-                    result["area1"] = region["area1"]["name"]
-                if region.get("area2", {}).get("name"):
-                    result["area2"] = region["area2"]["name"]
-                if region.get("area3", {}).get("name"):
-                    result["area3"] = region["area3"]["name"]
-                if region.get("area4", {}).get("name"):
-                    result["area4"] = region["area4"]["name"]
-            
-            if name == "roadaddr":
-                # Build road address
-                parts = []
-                if result["area1"]:
-                    parts.append(result["area1"])
-                if result["area2"]:
-                    parts.append(result["area2"])
-                if result["area3"]:
-                    parts.append(result["area3"])
-                if land.get("name"):  # Road name
-                    parts.append(land["name"])
-                if land.get("number1"):
-                    parts.append(land["number1"])
-                
-                result["road_address"] = " ".join(parts) if parts else None
-                
-            elif name == "addr":
-                # Build land address
-                parts = []
-                if result["area1"]:
-                    parts.append(result["area1"])
-                if result["area2"]:
-                    parts.append(result["area2"])
-                if result["area3"]:
-                    parts.append(result["area3"])
-                if result["area4"]:
-                    parts.append(result["area4"])
-                
-                # Add lot number
-                number1 = land.get("number1", "")
-                number2 = land.get("number2", "")
-                if number1:
-                    if number2:
-                        parts.append(f"{number1}-{number2}")
-                    else:
-                        parts.append(number1)
-                
-                result["land_address"] = " ".join(parts) if parts else None
-        
-        return result
 
 
 async def async_setup_entry(
@@ -378,49 +255,20 @@ async def async_setup_entry(
             start_str = route_data.get('start')
             end_str = route_data.get('end')
             
-            start_info = start_str
-            end_info = end_str
-            
             # Run blocking calls in executor
             def get_location_info():
                 try:
                     start_loc = temp_client.address(start_str)
                     end_loc = temp_client.address(end_str)
                     
-                    s_info = f"{start_str}"
-                    e_info = f"{end_str}"
+                    s_info = start_str
+                    e_info = end_str
                     
                     if start_loc:
-                        coords_info = f"x={start_loc.get('x')}, y={start_loc.get('y')}"
-                        if start_str.startswith(("device_tracker.", "person.", "zone.", "sensor.")):
-                            try:
-                                x = float(start_loc.get('x', 0))
-                                y = float(start_loc.get('y', 0))
-                                addr_data = temp_client.get_address_from_coords(x, y)
-                                if addr_data and addr_data.get('road_address'):
-                                    s_info = f"{start_str} [{addr_data.get('road_address')}] ({coords_info})"
-                                else:
-                                    s_info = f"{start_str} ({coords_info})"
-                            except (ValueError, TypeError):
-                                s_info = f"{start_str} ({coords_info})"
-                        else:
-                            s_info = f"{start_str} ({coords_info})"
+                        s_info = f"{start_str} (x={start_loc.get('x')}, y={start_loc.get('y')})"
                     
                     if end_loc:
-                        coords_info = f"x={end_loc.get('x')}, y={end_loc.get('y')}"
-                        if end_str.startswith(("device_tracker.", "person.", "zone.", "sensor.")):
-                            try:
-                                x = float(end_loc.get('x', 0))
-                                y = float(end_loc.get('y', 0))
-                                addr_data = temp_client.get_address_from_coords(x, y)
-                                if addr_data and addr_data.get('road_address'):
-                                    e_info = f"{end_str} [{addr_data.get('road_address')}] ({coords_info})"
-                                else:
-                                    e_info = f"{end_str} ({coords_info})"
-                            except (ValueError, TypeError):
-                                e_info = f"{end_str} ({coords_info})"
-                        else:
-                            e_info = f"{end_str} ({coords_info})"
+                        e_info = f"{end_str} (x={end_loc.get('x')}, y={end_loc.get('y')})"
                     
                     return route_id, s_info, e_info
                 except Exception as e:
