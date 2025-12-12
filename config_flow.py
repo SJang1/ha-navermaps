@@ -67,6 +67,10 @@ class NaverMapsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
         )
+        
+        # Safety check - should not happen but handle gracefully
+        if not config_entry:
+            return self.async_abort(reason="unknown")
 
         if user_input is not None:
             # Extract new API keys
@@ -119,7 +123,12 @@ class NaverMapsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=data_schema,
             errors=errors,
             description_placeholders={
-                "info": f"Current API Key ID: {masked_api_key_id}\nCurrent API Key: {masked_api_key}\n\nEnter your new Naver Cloud Platform Maps API credentials."
+                "info": "\n".join([
+                    f"Current API Key ID: {masked_api_key_id}",
+                    f"Current API Key: {masked_api_key}",
+                    "",
+                    "Enter your new Naver Cloud Platform Maps API credentials."
+                ])
             },
         )
 
