@@ -81,20 +81,35 @@ class NaverMapsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not api_key_id or not api_key:
                 errors["base"] = "invalid_auth"
             else:
-                # Update the config entry with new credentials while preserving other data
-                self.hass.config_entries.async_update_entry(
-                    config_entry,
-                    data={
-                        **config_entry.data,  # Preserve existing data
-                        "api_key_id": api_key_id,
-                        "api_key": api_key,
-                    },
-                )
+                # Check if new API Key ID conflicts with another entry
+                # (but allow it if it's the same as current entry's unique_id)
+                for entry in self.hass.config_entries.async_entries(DOMAIN):
+                    if entry.unique_id == api_key_id and entry.entry_id != config_entry.entry_id:
+                        errors["base"] = "already_configured"
+                        break
                 
-                # Reload the integration to use new credentials
-                await self.hass.config_entries.async_reload(config_entry.entry_id)
-                
-                return self.async_abort(reason="reconfigure_successful")
+                if not errors:
+                    # Update the config entry with new credentials while preserving other data
+                    self.hass.config_entries.async_update_entry(
+                        config_entry,
+                        data={
+                            **config_entry.data,  # Preserve existing data
+                            "api_key_id": api_key_id,
+                            "api_key": api_key,
+                        },
+                    )
+                    
+                    # If API Key ID changed, update the unique_id
+                    if config_entry.unique_id != api_key_id:
+                        self.hass.config_entries.async_update_entry(
+                            config_entry,
+                            unique_id=api_key_id,
+                        )
+                    
+                    # Reload the integration to use new credentials
+                    await self.hass.config_entries.async_reload(config_entry.entry_id)
+                    
+                    return self.async_abort(reason="reconfigure_successful")
 
         # Pre-fill with current values (masked for security)
         current_api_key_id = config_entry.data.get("api_key_id", "")
